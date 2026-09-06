@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Permintaan Darah PMI Kota Mojokerto</title>
+  <style>
+    :root {
+      --primary: #c62828;
+      --primary-hover: #b71c1c;
+      --bg: #f5f5f5;
+      --surface: #ffffff;
+      --text: #333333;
+    }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
+    .hidden { display: none !important; }
+    .container { max-width: 1100px; margin: 20px auto; padding: 20px; }
+    .card { background: var(--surface); border-radius: 8px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    h2, h3 { color: var(--primary); margin-top: 0; }
+    
+    /* Login Screen */
+    .login-box { max-width: 400px; margin: 80px auto; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: 600; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
+    }
+    .btn { background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; }
+    .btn:hover { background: var(--primary-hover); }
+    .btn-secondary { background: #666; }
+    .btn-danger { background: #d32f2f; }
+    
+    /* Grid Layout Form */
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; }
+    .header-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-bottom: 20px; }
+    
+    /* Table Styling */
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 13px; }
+    th { background: #ffebee; color: var(--primary); }
+
+    /* Modal User Edit */
+    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; }
+    .modal-content { background: white; padding: 20px; border-radius: 8px; width: 350px; }
+
+    /* Area Cetak F4 (215mm x 330mm) */
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea { position: absolute; left: 0; top: 0; width: 215mm; min-height: 330mm; padding: 15mm; font-size: 11pt; }
+      @page { size: 215mm 330mm; margin: 0; }
+      .no-print { display: none !important; }
+    }
+    .print-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .print-table td, .print-table th { border: 1px solid #000; padding: 6px; font-size: 10pt; }
+  </style>
+</head>
+<body>
+
+  <!-- Screen Login -->
+  <div id="loginScreen" class="card login-box">
+    <h2 style="text-align: center;">PMI Kota Mojokerto</h2>
+    <p style="text-align: center; color: #666;">Formulir Permintaan Darah RS</p>
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="loginUser" placeholder="Masukkan Username">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="loginPass" placeholder="Masukkan Password">
+    </div>
+    <button class="btn" style="width: 100%;" onclick="executeLogin()">Login</button>
+  </div>
+
+  <!-- Screen Main App -->
+  <div id="appScreen" class="container hidden">
+    <div class="card header-bar">
+      <div>
+        <h3 id="displayUserRS" style="margin: 0;">-</h3>
+        <small>User Login: <b id="displayUsername">-</b></small>
+      </div>
+      <div>
+        <button class="btn btn-secondary" onclick="openProfileModal()">Edit Profil</button>
+        <button class="btn btn-danger" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <!-- Form Input/Edit Data -->
+    <div class="card">
+      <h3 id="formTitle">Formulir Permintaan Darah Baru</h3>
+      <form id="bloodForm" onsubmit="handleSaveData(event)">
+        <input type="hidden" id="formId">
+        
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nama Petugas</label>
+            <input type="text" id="petugas" required>
+          </div>
+          <div class="form-group">
+            <label>Nama Dokter Meminta</label>
+            <input type="text" id="dokter" required>
+          </div>
+          <div class="form-group">
+            <label>No. Register / RM</label>
+            <input type="text" id="rm" required>
+          </div>
+          <div class="form-group">
+            <label>Nama Pasien</label>
+            <input type="text" id="pasien" required>
+          </div>
+          <div class="form-group">
+            <label>Tanggal Lahir</label>
+            <input type="date" id="tgllahir" required>
+          </div>
+          <div class="form-group">
+            <label>Jenis Kelamin</label>
+            <select id="jk" required>
+              <option value="Laki-laki">Laki-laki</option>
+              <option value="Perempuan">Perempuan</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Ruangan / Bagian</label>
+            <input type="text" id="ruangan" required>
+          </div>
+          <div class="form-group">
+            <label>Pelayanan</label>
+            <select id="pelayanan" required>
+              <option value="UMUM">UMUM</option>
+              <option value="BPJS">BPJS</option>
+              <option value="BPJS CKD">BPJS CKD</option>
+              <option value="BPJS THALASEMIA">BPJS THALASEMIA</option>
+              <option value="BPJS LEUKEMIA">BPJS LEUKEMIA</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Nomor SEP</label>
+            <input type="text" id="sep">
+          </div>
+          <div class="form-group">
+            <label>Golongan Darah</label>
+            <select id="goldar" required>
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="AB">AB</option>
+              <option value="O">O</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Rhesus</label>
+            <select id="rhesus" required>
+              <option value="Positif (+)">Positif (+)</option>
+              <option value="Negatif (-)">Negatif (-)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Diagnosa</label>
+            <input type="text" id="diagnosa" required>
+          </div>
+          <div class="form-group">
+            <label>Indikasi Transfusi</label>
+            <input type="text" id="indikasi" required>
+          </div>
+          <div class="form-group">
+            <label>Jumlah Trombosit</label>
+            <input type="text" id="trombosit">
+          </div>
+          <div class="form-group">
+            <label>Hb Terakhir</label>
+            <input type="text" id="hb" required>
+          </div>
+          <div class="form-group">
+            <label>Jenis Darah Meminta</label>
+            <select id="jenisdarah" required>
+              <option value="">-- Pilih Jenis Komponen Darah --</option>
+              <option value="WB">WB (Whole Blood)</option>
+              <option value="PRC">PRC (Packed Red Cells)</option>
+              <option value="TC">TC (Thrombocyte Concentrate)</option>
+              <option value="FFP">FFP (Fresh Frozen Plasma)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Jumlah Kantong</label>
+            <input type="number" id="kantong" required>
+          </div>
+          <div class="form-group">
+            <label>Sifat Permintaan</label>
+            <select id="sifat" required>
+              <option value="Biasa">Biasa</option>
+              <option value="Cito">Cito (Darurat)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tanggal Dibutuhkan</label>
+            <input type="date" id="tgldibutuhkan" required>
+          </div>
+          <div class="form-group">
+            <label>Transfusi Sebelumnya</label>
+            <select id="transfusi_sebelumnya" required>
+              <option value="Pernah">Pernah</option>
+              <option value="Belum Pernah">Belum Pernah</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Reaksi Transfusi</label>
+            <input type="text" id="reaksi" placeholder="Ada/Tidak (Jelaskan jika ada)">
+          </div>
+        </div>
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label>Alamat Pasien</label>
+          <textarea id="alamat" rows="2" required></textarea>
+        </div>
+        
+        <div style="margin-top: 15px;">
+          <button type="submit" class="btn">Simpan Data</button>
+          <button type="button" class="btn btn-secondary" onclick="resetForm()">Batal</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Tabel Data Permintaan Darah -->
+    <div class="card">
+      <h3>Riwayat Permintaan Darah</h3>
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>No. RM</th>
+              <th>Nama Pasien</th>
+              <th>Gol. Darah</th>
+              <th>Jenis Darah</th>
+              <th>Jumlah</th>
+              <th>Sifat</th>
+              <th>Tgl Dibutuhkan</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="dataTableBody">
+            <!-- Data diisi via Javascript -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Edit User -->
+  <div id="profileModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Edit Profil User</h3>
+      <div class="form-group">
+        <label>Nama Rumah Sakit</label>
+        <input type="text" id="editRS">
+      </div>
+      <div class="form-group">
+        <label>Password Baru (Opsional)</label>
+        <input type="password" id="editPass" placeholder="Isi jika ingin diubah">
+      </div>
+      <button class="btn" onclick="saveProfile()">Simpan</button>
+      <button class="btn btn-secondary" onclick="closeProfileModal()">Batal</button>
+    </div>
+  </div>
+
+  <!-- Layout Cetak Ukuran F4 -->
+  <div id="printArea" class="hidden">
+    <div style="text-align: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 15px;">
+      <h2 style="margin: 0; font-size: 16pt;">PALANG MERAH INDONESIA KOTA MOJOKERTO</h2>
+      <h3 style="margin: 0; font-size: 14pt;">UNIT DONOR DARAH</h3>
+      <p style="margin: 2px 0; font-size: 10pt;">Jl. Hayam Wuruk No. 1, Kota Mojokerto | Telp: (0321) 321321</p>
+      <h4 style="margin-top: 10px; text-decoration: underline; font-size: 13pt;">FORMULIR PERMINTAAN DARAH UNTUK TRANSFUSI</h4>
+    </div>
+
+    <table style="width: 100%; font-size: 10pt; line-height: 1.5; border: none;">
+      <tr><td width="30%" style="border:none;"><strong>Rumah Sakit Pengirim</strong></td><td style="border:none;">: <span id="p_rs"></span></td></tr>
+      <tr><td style="border:none;"><strong>Nama Dokter Meminta</strong></td><td style="border:none;">: <span id="p_dokter"></span></td></tr>
+      <tr><td style="border:none;"><strong>Nama Petugas RS</strong></td><td style="border:none;">: <span id="p_petugas"></span></td></tr>
+    </table>
+
+    <h4 style="margin: 10px 0 5px 0;">DETAIL PASIEN:</h4>
+    <table class="print-table">
+      <tr><td width="30%"><strong>No. Register / RM</strong></td><td id="p_rm"></td></tr>
+      <tr><td><strong>Nama Pasien</strong></td><td id="p_pasien"></td></tr>
+      <tr><td><strong>Tgl Lahir / Jenis Kelamin</strong></td><td><span id="p_tgllahir"></span> / <span id="p_jk"></span></td></tr>
+      <tr><td><strong>Alamat Pasien</strong></td><td id="p_alamat"></td></tr>
+      <tr><td><strong>Ruangan / Pelayanan</strong></td><td><span id="p_ruangan"></span> / <span id="p_pelayanan"></span> (SEP: <span id="p_sep"></span>)</td></tr>
+    </table>
+
+    <h4 style="margin: 10px 0 5px 0;">PEMERIKSAAN & PERMINTAAN DARAH:</h4>
+    <table class="print-table">
+      <tr>
+        <td width="30%"><strong>Gol. Darah / Rhesus</strong></td>
+        <td><span id="p_goldar"></span> / <span id="p_rhesus"></span></td>
+      </tr>
+      <tr><td><strong>Diagnosa / Indikasi</strong></td><td><span id="p_diagnosa"></span> / <span id="p_indikasi"></span></td></tr>
+      <tr><td><strong>Hasil Lab (Hb / Trombosit)</strong></td><td>Hb: <span id="p_hb"></span> g/dL | Trombosit: <span id="p_trombosit"></span> /µL</td></tr>
+      <tr><td><strong>Permintaan Darah</strong></td><td><strong><span id="p_jenisdarah"></span></strong> - Jumlah: <strong><span id="p_kantong"></span> Kantong</strong></td></tr>
+      <tr><td><strong>Sifat / Tgl Dibutuhkan</strong></td><td><span id="p_sifat"></span> / <span id="p_tgldibutuhkan"></span></td></tr>
+      <tr><td><strong>Riwayat Transfusi</strong></td><td>Transfusi Sebelumnya: <span id="p_transfusi"></span> | Reaksi: <span id="p_reaksi"></span></td></tr>
+    </table>
+
+    <br><br>
+    <table style="width: 100%; border: none; text-align: center; font-size: 10pt;">
+      <tr>
+        <td style="border:none;" width="50%">
+          Petugas Rumah Sakit,<br><br><br><br>
+          ( <u><span id="p_ttd_petugas"></span></u> )
+        </td>
+        <td style="border:none;" width="50%">
+          Mojokerto, <span id="p_tgl_cetak"></span><br>Dokter Peminta,<br><br><br><br>
+          ( <u><span id="p_ttd_dokter"></span></u> )
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <script>
+    let activeUser = null;
+    let localDataCache = [];
+
+    // Tombol ENTER untuk Aktifkan Login
+    document.getElementById('loginPass').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') executeLogin();
+    });
+    document.getElementById('loginUser').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') executeLogin();
+    });
+
+    function executeLogin() {
+      const u = document.getElementById('loginUser').value;
+      const p = document.getElementById('loginPass').value;
+      if (!u || !p) return alert("Isi username dan password!");
+
+      google.script.run.withSuccessHandler(res => {
+        if (res.success) {
+          activeUser = res;
+          document.getElementById('loginScreen').classList.add('hidden');
+          document.getElementById('appScreen').classList.remove('hidden');
+          document.getElementById('displayUserRS').innerText = res.rs;
+          document.getElementById('displayUsername').innerText = res.username;
+          loadUserData();
+        } else {
+          alert(res.message);
+        }
+      }).loginUser(u, p);
+    }
+
+    function logout() {
+      activeUser = null;
+      document.getElementById('appScreen').classList.add('hidden');
+      document.getElementById('loginScreen').classList.remove('hidden');
+      document.getElementById('loginUser').value = '';
+      document.getElementById('loginPass').value = '';
+    }
+
+    function loadUserData() {
+      google.script.run.withSuccessHandler(data => {
+        localDataCache = data;
+        const tbody = document.getElementById('dataTableBody');
+        tbody.innerHTML = '';
+        data.forEach(item => {
+          tbody.innerHTML += `
+            <tr>
+              <td>${item.rm}</td>
+              <td>${item.pasien}</td>
+              <td>${item.goldar} (${item.rhesus})</td>
+              <td>${item.jenisdarah}</td>
+              <td>${item.kantong}</td>
+              <td>${item.sifat}</td>
+              <td>${item.tgldibutuhkan}</td>
+              <td>
+                <button class="btn" style="padding:4px 8px; font-size:11px;" onclick="editForm('${item.id}')">Edit</button>
+                <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="removeData('${item.id}')">Hapus</button>
+              </td>
+            </tr>
+          `;
+        });
+      }).getUserData(activeUser.username);
+    }
+
+    function handleSaveData(e) {
+      e.preventDefault();
+      const formData = {
+        id: document.getElementById('formId').value,
+        rs: activeUser.rs,
+        petugas: document.getElementById('petugas').value,
+        dokter: document.getElementById('dokter').value,
+        rm: document.getElementById('rm').value,
+        pasien: document.getElementById('pasien').value,
+        tgllahir: document.getElementById('tgllahir').value,
+        jk: document.getElementById('jk').value,
+        ruangan: document.getElementById('ruangan').value,
+        pelayanan: document.getElementById('pelayanan').value,
+        sep: document.getElementById('sep').value,
+        goldar: document.getElementById('goldar').value,
+        rhesus: document.getElementById('rhesus').value,
+        diagnosa: document.getElementById('diagnosa').value,
+        indikasi: document.getElementById('indikasi').value,
+        trombosit: document.getElementById('trombosit').value,
+        hb: document.getElementById('hb').value,
+        jenisdarah: document.getElementById('jenisdarah').value,
+        kantong: document.getElementById('kantong').value,
+        sifat: document.getElementById('sifat').value,
+        tgldibutuhkan: document.getElementById('tgldibutuhkan').value,
+        transfusi_sebelumnya: document.getElementById('transfusi_sebelumnya').value,
+        reaksi: document.getElementById('reaksi').value,
+        alamat: document.getElementById('alamat').value
+      };
+
+      google.script.run.withSuccessHandler(res => {
+        alert(res.message);
+        resetForm();
+        loadUserData();
+      }).saveData(formData, activeUser.username);
+    }
+
+    function editForm(id) {
+      const item = localDataCache.find(x => x.id === id);
+      if (!item) return;
+      document.getElementById('formTitle').innerText = "Edit Data Permintaan Darah";
+      document.getElementById('formId').value = item.id;
+      document.getElementById('petugas').value = item.petugas;
+      document.getElementById('dokter').value = item.dokter;
+      document.getElementById('rm').value = item.rm;
+      document.getElementById('pasien').value = item.pasien;
+      document.getElementById('tgllahir').value = item.tgllahir;
+      document.getElementById('jk').value = item.jk;
+      document.getElementById('ruangan').value = item.ruangan;
+      document.getElementById('pelayanan').value = item.pelayanan;
+      document.getElementById('sep').value = item.sep;
+      document.getElementById('goldar').value = item.goldar;
+      document.getElementById('rhesus').value = item.rhesus;
+      document.getElementById('diagnosa').value = item.diagnosa;
+      document.getElementById('indikasi').value = item.indikasi;
+      document.getElementById('trombosit').value = item.trombosit;
+      document.getElementById('hb').value = item.hb;
+      document.getElementById('jenisdarah').value = item.jenisdarah;
+      document.getElementById('kantong').value = item.kantong;
+      document.getElementById('sifat').value = item.sifat;
+      document.getElementById('tgldibutuhkan').value = item.tgldibutuhkan;
+      document.getElementById('transfusi_sebelumnya').value = item.transfusi_sebelumnya;
+      document.getElementById('reaksi').value = item.reaksi;
+      document.getElementById('alamat').value = item.alamat;
+    }
+
+    function resetForm() {
+      document.getElementById('formTitle').innerText = "Formulir Permintaan Darah Baru";
+      document.getElementById('formId').value = "";
+      document.getElementById('bloodForm').reset();
+    }
+
+    function removeData(id) {
+      if (confirm("Apakah Anda yakin ingin menghapus data ini?")) {
+        google.script.run.withSuccessHandler(res => {
+          alert(res.message);
+          loadUserData();
+        }).deleteData(id, activeUser.username);
+      }
+    }
+
+    function openProfileModal() {
+      document.getElementById('editRS').value = activeUser.rs;
+      document.getElementById('profileModal').classList.remove('hidden');
+    }
+    function closeProfileModal() { document.getElementById('profileModal').classList.add('hidden'); }
+
+    function saveProfile() {
+      const pass = document.getElementById('editPass').value;
+      const rs = document.getElementById('editRS').value;
+      google.script.run.withSuccessHandler(res => {
+        alert(res.message);
+        if (res.success) {
+          activeUser.rs = rs;
+          document.getElementById('displayUserRS').innerText = rs;
+          closeProfileModal();
+        }
+      }).editUser(activeUser.username, pass, rs);
+    }
+
+    function printPDF(id) {
+      const item = localDataCache.find(x => x.id === id);
+      if (!item) return;
+
+      document.getElementById('p_rs').innerText = item.rs;
+      document.getElementById('p_dokter').innerText = item.dokter;
+      document.getElementById('p_petugas').innerText = item.petugas;
+      document.getElementById('p_rm').innerText = item.rm;
+      document.getElementById('p_pasien').innerText = item.pasien;
+      document.getElementById('p_tgllahir').innerText = item.tgllahir;
+      document.getElementById('p_jk').innerText = item.jk;
+      document.getElementById('p_alamat').innerText = item.alamat;
+      document.getElementById('p_ruangan').innerText = item.ruangan;
+      document.getElementById('p_pelayanan').innerText = item.pelayanan;
+      document.getElementById('p_sep').innerText = item.sep || "-";
+      document.getElementById('p_goldar').innerText = item.goldar;
+      document.getElementById('p_rhesus').innerText = item.rhesus;
+      document.getElementById('p_diagnosa').innerText = item.diagnosa;
+      document.getElementById('p_indikasi').innerText = item.indikasi;
+      document.getElementById('p_hb').innerText = item.hb;
+      document.getElementById('p_trombosit').innerText = item.trombosit || "-";
+      document.getElementById('p_jenisdarah').innerText = item.jenisdarah;
+      document.getElementById('p_kantong').innerText = item.kantong;
+      document.getElementById('p_sifat').innerText = item.sifat;
+      document.getElementById('p_tgldibutuhkan').innerText = item.tgldibutuhkan;
+      document.getElementById('p_transfusi').innerText = item.transfusi_sebelumnya;
+      document.getElementById('p_reaksi').innerText = item.reaksi || "-";
+      document.getElementById('p_ttd_petugas').innerText = item.petugas;
+      document.getElementById('p_ttd_dokter').innerText = item.dokter;
+      document.getElementById('p_tgl_cetak').innerText = new Date().toLocaleDateString('id-ID');
+
+      const printArea = document.getElementById('printArea');
+      printArea.classList.remove('hidden');
+      window.print();
+      printArea.classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
